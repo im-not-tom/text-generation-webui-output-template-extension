@@ -1,14 +1,21 @@
-from typing import List, Set
+from typing import List, Set, Dict
 import os
 
 if "OT_TESTING" in os.environ:
     from collections import namedtuple
+    # from transformers import AutoTokenizer
+    # tokenizer = AutoTokenizer.from_pretrained('../../models/oobabooga_llama-tokenizer', use_fast=False)
     shared = namedtuple("Shared", ['tokenizer'])(namedtuple("Tokenizer", ['eos_token_id'])(0))
-    ooba_encode = None
-    ooba_decode = None
+    from extensions.output_template.test_tokenizer import encode, decode 
 else:
-    from modules.text_generation import encode as ooba_encode, decode as ooba_decode
     from modules import shared
+
+    def encode(text) -> List[int]:
+        return shared.tokenizer.encode(str(text), add_special_tokens=False)
+
+    def decode(token_ids: List[int]) -> str:
+        return shared.tokenizer.decode(token_ids)
+
 
 
 class AllowedTokens:
@@ -66,7 +73,7 @@ class AllowedTokens:
             scores[..., b] = -float("inf")
 
 
-def get_token_dictionary():
+def get_token_dictionary() -> Dict[int, str]:
     from extensions.output_template.script import params, logger
     if not params["token_dictionary"] or params["used_tokenizer"] is not shared.tokenizer:
         assert params["scores_size"]
@@ -75,24 +82,3 @@ def get_token_dictionary():
         params["used_tokenizer"] = shared.tokenizer
         logger.info("output_template: Done creating token dictionary.")
     return params["token_dictionary"]
-
-
-def encode(text) -> List[int]:
-    if ooba_encode:
-        return [int(i) for i in ooba_encode(text, add_bos_token=False)[0]]
-    else:
-        # This branch is used only in testing and makes no sense for normal use.
-        # Additionally, following replacements exist only to simulate issues with matching
-        # text to tokens when text is mapped to multiple or only part of a token.
-        text = text.replace("six", "\x06").replace('..."', "\x08").replace("...", "\x07")
-        return [ord(x) for x in text]
-
-
-def decode(token_ids: List[int]) -> str:
-    if ooba_decode:
-        return ooba_decode(token_ids)
-    else:
-        # See above
-        text = "".join([chr(x) for x in token_ids])
-        text = text.replace("\x08", '..."').replace("\x07", "...").replace("\x06", "six")
-        return text
