@@ -1,7 +1,6 @@
-from typing import Tuple, List, Dict, Union, Optional, Set
-from extensions.output_template.utils import encode, decode, get_token_dictionary, AllowedTokens
+from typing import List, Optional, Set
+from extensions.output_template.utils import get_token_dictionary, AllowedTokens
 from enum import IntEnum
-import re
 
 
 class Advance(IntEnum):
@@ -9,10 +8,6 @@ class Advance(IntEnum):
     Done = 1
     Reject = 2
     TryNext = 3
-
-
-class GenerationError(Exception):
-    pass
 
 
 class Matcher:

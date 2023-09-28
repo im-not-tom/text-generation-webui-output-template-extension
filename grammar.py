@@ -1,8 +1,8 @@
-from typing import Tuple, List, Dict, Union, Optional, Set
+from typing import Tuple, List, Dict, Optional, Set
 from extensions.output_template.symbols import Symbol, Terminal, NonTerminal, Sequence, Alternative, Repeat, RegExp
-from extensions.output_template.state_machine import GenerationError, Advance, Matcher
-from extensions.output_template.utils import encode, decode, shared, AllowedTokens
-import re
+from extensions.output_template.state_machine import Advance, Matcher
+from extensions.output_template.utils import shared, AllowedTokens
+import torch, re
 
 RE_RULE = re.compile(r'\s*([-a-z]+)\s*::=\s*(.*)', re.MULTILINE | re.DOTALL)
 RE_NEWLINE = re.compile(r'[ \t]*\n[ \t\n]*(.*)', re.MULTILINE | re.DOTALL)
@@ -84,7 +84,7 @@ class Grammar:
         """
         return self.active_matcher.get_effective_matcher() if self.active_matcher else None
 
-    def update_scores(self, scores: "Tensor") -> List[int]:
+    def update_scores(self, scores: torch.FloatTensor) -> torch.FloatTensor:
         """
         Calculates probability scores of next token according to current state.
         May update and return same object as one that was passed as argument.
@@ -125,6 +125,10 @@ class GrammarError(ValueError):
 
 
 class ValidationError(GrammarError):
+    pass
+
+
+class GenerationError(Exception):
     pass
 
 

@@ -1,9 +1,4 @@
-from typing import Tuple, List, Dict, Union, Optional, Set
-
-from extensions.output_template.state_machine import Matcher, RepeatMatcher, TerminalMatcher, SequenceMatcher, \
-    RegExpMatcher, AlternativeMatcher
-from extensions.output_template.utils import encode, decode, get_token_dictionary, AllowedTokens
-from enum import IntEnum
+from extensions.output_template.state_machine import *
 import re
 
 

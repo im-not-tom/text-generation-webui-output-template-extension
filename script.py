@@ -1,10 +1,8 @@
 from extensions.output_template.grammar import Grammar
-from extensions.output_template.utils import shared, AllowedTokens, decode
-from extensions.output_template.template import Template
+from extensions.output_template.utils import shared
 from functools import partial
+import torch, transformers
 try:
-    import transformers
-    from transformers import LogitsProcessor
     from modules.logging_colors import logger
 except ModuleNotFoundError:
     # Allows testing by running script outside text-generation-ui
@@ -25,8 +23,9 @@ params = {
 }
 
 
-class TemplatingLogitsProcessor(LogitsProcessor):
-    def __call__(self, _: list[list[int]], scores: list[list[int]]):
+class TemplatingLogitsProcessor(transformers.LogitsProcessor):
+
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor):
         if params["enabled"]:
             params["scores_size"] = len(scores[0])
             grammar: Grammar = params["grammar"]

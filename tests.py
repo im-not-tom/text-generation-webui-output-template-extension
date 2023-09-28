@@ -3,8 +3,8 @@ from typing import Union
 
 os.environ["OT_TESTING"] = "1"
 from extensions.output_template.script import TemplatingLogitsProcessor, params
-from extensions.output_template.grammar import Grammar, Repeat, Alternative, RegExp, Advance
 from extensions.output_template.utils import encode, decode, shared, MINUS_INF
+from extensions.output_template.grammar import Grammar, Repeat, RegExp
 from torch import Tensor
 import math, random, json
 
@@ -80,8 +80,6 @@ def test_grammar_parser():
 
 def test_terminal():
     grammar: Grammar = params["grammar"]
-    # grammar.reset("""root ::= 'one' ('two' 'three' ('four' 'five')) 'six'""")
-    # assert get_text() == "onetwothreefourfivesix"
     grammar.reset("""root ::= 'Hello world' [\n]+""")
     EOL = encode("\n")[0]
     t = get_text(EOL)
@@ -224,11 +222,11 @@ def test_json():
           )* "\\"" ws
 
         number ::= ("-"? ([0-9] | [1-9] [0-9]*)) ("." [0-9]+)? ([eE] [-+]? [0-9]+)? ws
-        
+
         # Optional space: by convention, applied in this grammar after literal chars when allowed
         ws ::= ([ \\t\\n] ws)?
     """)
-    
+
     random.seed(2342343231)
     # 1st token has to be {
     assert ord("{") == sample_test(random_scores())

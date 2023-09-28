@@ -1,13 +1,10 @@
 from typing import List, Set, Dict
-from torch import Tensor
 import torch, os
 MINUS_INF = -float("inf")
 
 
 if "OT_TESTING" in os.environ:
     from collections import namedtuple
-    # from transformers import AutoTokenizer
-    # tokenizer = AutoTokenizer.from_pretrained('../../models/oobabooga_llama-tokenizer', use_fast=False)
     shared = namedtuple("Shared", ['tokenizer'])(namedtuple("Tokenizer", ['eos_token_id'])(0))
     from extensions.output_template.test_tokenizer import encode, decode 
 else:
@@ -93,7 +90,7 @@ class AllowedTokens:
         data.append(f"banned={self.banned}")
         return f"<AllowedTokens {' '.join(data)}>"
 
-    def apply(self, scores: Tensor):
+    def apply(self, scores: torch.FloatTensor):
         if self.allowed and not self.banned:
             s = scores.new_full(scores.shape, False, dtype=torch.bool)
             for a in self.allowed:
