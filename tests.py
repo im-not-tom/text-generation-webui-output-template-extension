@@ -73,6 +73,10 @@ def test_grammar_parser():
     g = Grammar(TEMPLATE)
     assert len(g.rules) == 8
 
+    g.reset("""
+        root ::= "hi"
+        # Testing case when grammar ends with non-terminated line with comment""")
+
 
 def test_terminal():
     grammar: Grammar = params["grammar"]
@@ -216,10 +220,12 @@ def test_json():
         string ::=
           "\\"" (
             [^"\\\\\n] |
-            "\\\\" (["\\\\/bfnrt] | "u" [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F])
+            "\\\\" (["\\\\/bfnrt] | "u" [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F])        # escapes
           )* "\\"" ws
 
         number ::= ("-"? ([0-9] | [1-9] [0-9]*)) ("." [0-9]+)? ([eE] [-+]? [0-9]+)? ws
+        
+        # Optional space: by convention, applied in this grammar after literal chars when allowed
         ws ::= ([ \\t\\n] ws)?
     """)
     

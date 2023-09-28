@@ -8,6 +8,7 @@ RE_RULE = re.compile(r'\s*([-a-z]+)\s*::=\s*(.*)', re.MULTILINE | re.DOTALL)
 RE_NEWLINE = re.compile(r'[ \t]*\n[ \t\n]*(.*)', re.MULTILINE | re.DOTALL)
 RE_TERMINAL = re.compile(r'[ \t]*([-a-z]+)[ \t]*(.*)', re.DOTALL)
 RE_OR = re.compile(r'[ \t\n]*\|[ \t]*(.*)', re.MULTILINE | re.DOTALL)
+RE_COMMENT = re.compile(r'([^#]*)#[^\n]*(.*)', re.MULTILINE | re.DOTALL)
 
 
 class Grammar:
@@ -26,6 +27,12 @@ class Grammar:
         if definition:
             text = definition
             self.rules = {}
+
+            # Strip comments
+            m = RE_COMMENT.match(text)
+            while m:
+                text = m.group(1) + m.group(2)
+                m = RE_COMMENT.match(text)
 
             while text:
                 m = RE_RULE.match(text)
