@@ -1,3 +1,4 @@
+from typing import Optional
 from extensions.output_template.grammar import Grammar
 from extensions.output_template.utils import shared
 from functools import partial
@@ -25,10 +26,26 @@ params = {
 
 class TemplatingLogitsProcessor(transformers.LogitsProcessor):
 
-    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor):
+    def __init__(self):
+        super().__init__()
+        self.last_input_size = 0
+
+    def __call__(self, input_ids: Optional[torch.LongTensor], scores: torch.FloatTensor):
         if params["enabled"]:
             params["scores_size"] = len(scores[0])
             grammar: Grammar = params["grammar"]
+
+            if input_ids is not None:
+                # input_ids are None when running from tests.
+                input_size = len(input_ids[0])
+                if input_size <= self.last_input_size:
+                    logger.warning("output_template: input size unexpectedly decreased. Restarting grammar (except wrong output)")
+                    grammar.reset()
+                elif self.last_input_size != 0:
+                    for token_id in input_ids[0][self.last_input_size:]:
+                        grammar.advance(int(token_id))
+                self.last_input_size = input_size
+
             return grammar.update_scores(scores)
         return scores
 
@@ -62,17 +79,6 @@ def input_modifier(string, state, is_chat=False):
             params["enabled"] = True
         else:
             params["enabled"] = False
-
-        if not hasattr(shared.model, "__output_template_sample_method_patched"):
-            # Very hacky way to inject my own callback after new token is sampled
-            # This is needed to move state of template forward
-            def wrapper(generate_orig, *a, **kwargs):
-                assert kwargs['stopping_criteria']
-                kwargs['stopping_criteria'].append(token_generated_callback)
-                return generate_orig(*a, **kwargs)
-
-            shared.model.generate = partial(wrapper, shared.model.generate)
-            shared.model.__output_template_sample_method_patched = True
     return string
 
 

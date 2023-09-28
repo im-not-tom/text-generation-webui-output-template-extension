@@ -8,7 +8,6 @@ from extensions.output_template.grammar import Grammar, Repeat, RegExp
 from torch import Tensor
 import math, random, json
 
-input_ids = Tensor([[]])
 EOS = shared.tokenizer.eos_token_id
 TEMPLATE = """
 root ::= "Alice:" space action
@@ -48,7 +47,7 @@ def scores_to_text(scores):
 
 def sample_test(scores) -> int:
     # Returns single generated token
-    TemplatingLogitsProcessor()(input_ids, scores)
+    TemplatingLogitsProcessor()(None, scores)
     best = int(scores.argmax())
     grammar: Grammar = params["grammar"]
     grammar.advance(best)
@@ -130,20 +129,20 @@ def test_sequence():
 def test_regexp():
     grammar: Grammar = params["grammar"]
     grammar.reset("root ::= [a-z]")
-    scores = TemplatingLogitsProcessor()(input_ids, random_scores())
+    scores = TemplatingLogitsProcessor()(None, random_scores())
     assert len([x for x in scores[0] if x > MINUS_INF]) == 26
     assert scores[..., EOS] == MINUS_INF        # Also make sure that EOS is banned in any case
 
     # Tests that combination of repetition and regexp allows multi-char tokens
     grammar.reset("root ::= [a-z]+")
-    scores = TemplatingLogitsProcessor()(input_ids, random_scores())
+    scores = TemplatingLogitsProcessor()(None, random_scores())
     assert len([x for x in scores[0] if x > MINUS_INF]) > 26
     assert scores[..., encode("world")] > MINUS_INF
     assert scores[..., EOS] == MINUS_INF
 
     # Tests banning specific character
     grammar.reset("root ::= [^\n]+")
-    scores = TemplatingLogitsProcessor()(input_ids, random_scores())
+    scores = TemplatingLogitsProcessor()(None, random_scores())
     assert scores[..., 10] < 0
     assert scores[..., EOS] == MINUS_INF
 
@@ -159,7 +158,7 @@ def test_repeat():
         # Just generate few random chars
         assert sample_test(set_score('"', random_scores(), MINUS_INF)) not in (EOS, q)
     # Test that " is still allowed to be generated
-    scores = TemplatingLogitsProcessor()(input_ids, set_score('"', random_scores()))
+    scores = TemplatingLogitsProcessor()(None, set_score('"', random_scores()))
     assert scores[..., q] > MINUS_INF
     assert q == sample_test(scores)
     assert EOS == sample_test(random_scores())
@@ -243,13 +242,13 @@ def test_json():
     assert ord('"') == sample_test(set_score('"', random_scores(), 1000))
     # Now only whitespace and ':' should be allowed
     scores = random_scores()
-    TemplatingLogitsProcessor()(input_ids, scores)
+    TemplatingLogitsProcessor()(None, scores)
     assert scores[..., ord(':')] > 0
     assert len([x for x in scores[0] if x > 0]) == 3    # ':', space and newline
     # Go over ':' and ban whitespace. Now start-of-value tokens should be allowed
     sample_test(set_score(':', random_scores()))
     scores = set_score(list(' \n'), random_scores(), MINUS_INF)
-    TemplatingLogitsProcessor()(input_ids, scores)
+    TemplatingLogitsProcessor()(None, scores)
     # 14 characters =  0-9, minus sign, {, [ and '"'.
     # Additionally, 3 characters for n, t and f of null, true and false  
     assert len([ x for x in scores[0] if x > 0 ]) == 17
@@ -263,7 +262,7 @@ def test_json():
     a = get_text('"')
     assert '"' not in a[:-1]
     scores = random_scores()
-    TemplatingLogitsProcessor()(input_ids, scores)
+    TemplatingLogitsProcessor()(None, scores)
     assert len([x for x in scores[0] if x > 0]) == 3    # ':', space and newline
     assert ord(':') == sample_test(set_score(list(' \n'), random_scores(), MINUS_INF))
 
