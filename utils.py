@@ -95,7 +95,8 @@ class AllowedTokens:
             s = scores.new_full(scores.shape, False, dtype=torch.bool)
             for a in self.allowed:
                 s[..., a] = True
-            s[..., shared.tokenizer.eos_token_id] = True
+            if self.allow_eos:
+                s[..., shared.tokenizer.eos_token_id] = False
             scores[~s] = MINUS_INF
         if self.banned or not self.allow_eos:
             s = scores.new_full(scores.shape, True, dtype=torch.bool)
