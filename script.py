@@ -14,8 +14,10 @@ except ModuleNotFoundError:
         pass
 
 
+EMPTY_GRAMMAR = "root ::= [.]*"
+
 params = {
-    "grammar": Grammar("root ::= [.]*"),
+    "grammar": Grammar(EMPTY_GRAMMAR),
     "enabled": False,
     "template": "",
     "token_dictionary": None,
@@ -73,9 +75,12 @@ def input_modifier(string, state, is_chat=False):
     Note: In chat_mode, this extension does nothing.
     """
     if not is_chat:
-        if params["template"]:
+        if "grammar" in state or params["template"]:
             grammar: Grammar = params["grammar"]
-            grammar.reset(params["template"])
+            if "grammar" in state:
+                grammar.reset(state["grammar"] or EMPTY_GRAMMAR)
+            else:
+                grammar.reset(params["template"])
             params["enabled"] = True
         else:
             params["enabled"] = False
