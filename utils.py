@@ -96,7 +96,7 @@ class AllowedTokens:
             for a in self.allowed:
                 s[..., a] = True
             if self.allow_eos:
-                s[..., shared.tokenizer.eos_token_id] = False
+                s[..., shared.tokenizer.eos_token_id] = True
             scores[~s] = MINUS_INF
         if self.banned or not self.allow_eos:
             s = scores.new_full(scores.shape, True, dtype=torch.bool)
@@ -113,7 +113,20 @@ def get_token_dictionary() -> Dict[int, str]:
     if not params["token_dictionary"] or params["used_tokenizer"] is not shared.tokenizer:
         assert params["scores_size"]
         logger.info("output_template: Creating token dictionary. This takes few seconds, but is done only once.")
-        params["token_dictionary"] = { i: decode([i]) for i in range(params["scores_size"]) }
+        if "OT_TESTING" in os.environ:
+            params["token_dictionary"] = {i: decode([i]) for i in range(params["scores_size"])}
+        else:
+            params["token_dictionary"] = {
+                token_id: (
+                    shared.tokenizer.decode([token_id])
+                    if "▁" not in tmp
+                    else tmp.replace("▁", " ")
+                )
+                for (token_id, tmp) in (
+                    (i, shared.tokenizer.convert_ids_to_tokens(i))
+                    for i in range(params["scores_size"])
+                )
+            }
         params["used_tokenizer"] = shared.tokenizer
         logger.info("output_template: Done creating token dictionary.")
     return params["token_dictionary"]
