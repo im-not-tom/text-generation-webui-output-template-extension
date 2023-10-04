@@ -1,5 +1,6 @@
 from typing import Tuple, List, Dict, Optional, Set
-from extensions.output_template.symbols import Symbol, Terminal, NonTerminal, Sequence, Alternative, Repeat, RegExp
+from extensions.output_template.symbols import Symbol, Terminal, NonTerminal, Sequence, Alternative, Repeat, RegExp, \
+    AnyToken
 from extensions.output_template.state_machine import Advance, Matcher
 from extensions.output_template.utils import shared, AllowedTokens
 import torch, re
@@ -7,6 +8,7 @@ import torch, re
 RE_RULE = re.compile(r'\s*([-a-z]+)\s*::=\s*(.*)', re.MULTILINE | re.DOTALL)
 RE_NEWLINE = re.compile(r'[ \t]*\n[ \t\n]*(.*)', re.MULTILINE | re.DOTALL)
 RE_TERMINAL = re.compile(r'[ \t]*([-a-z]+)[ \t]*(.*)', re.DOTALL)
+RE_ANYTOKEN = re.compile(r'[ \t]*\.[ \t]*\*[ \t]*(.*)', re.DOTALL)
 RE_OR = re.compile(r'[ \t\n]*\|[ \t]*(.*)', re.MULTILINE | re.DOTALL)
 RE_COMMENT = re.compile(r'([^#]*)#[^\n]*(.*)', re.MULTILINE | re.DOTALL)
 
@@ -183,6 +185,10 @@ def parse_sequence(text: str, parentheses=False) -> Tuple[Sequence, str]:
         elif parentheses and text[0] == ")":
             text = text[1:]
             break
+        elif RE_ANYTOKEN.match(text):
+            # '.*' rule
+            text, = RE_ANYTOKEN.match(text).groups()
+            seq.append(AnyToken())
         elif text[0] in "*?+":
             # Repeat rule
             if not seq:

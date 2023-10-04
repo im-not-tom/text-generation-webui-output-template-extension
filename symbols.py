@@ -66,6 +66,19 @@ class RegExp(Symbol):
         return RegExpMatcher(self)
 
 
+class AnyToken(Symbol):
+    """
+    Special symbol to which '.*' is translated.
+    Just matches anything, basically turning grammar off.
+    """
+
+    def __repr__(self):
+        return f'.*'
+
+    def enter(self, g: "Grammar") -> Matcher:
+        return AnyTokenMatcher(self)
+
+
 class Collection(Symbol):
     def __init__(self, items: List[Symbol]):
         self.items = items

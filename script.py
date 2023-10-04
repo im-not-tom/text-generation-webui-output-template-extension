@@ -14,7 +14,7 @@ except ModuleNotFoundError:
         pass
 
 
-EMPTY_GRAMMAR = "root ::= [.]*"
+EMPTY_GRAMMAR = "root ::= .*"
 
 params = {
     "grammar": Grammar(EMPTY_GRAMMAR),

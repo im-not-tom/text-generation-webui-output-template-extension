@@ -121,6 +121,22 @@ class RegExpMatcher(Matcher):
         return Advance.Done
 
 
+class AnyTokenMatcher(Matcher):
+    symbol: "AnyToken"
+
+    def debug(self) -> str:
+        return ".*"
+
+    def get_effective_matcher(self) -> "Matcher":
+        return self
+
+    def get_allowed_tokens(self, g: "Grammar") -> AllowedTokens:
+        return AllowedTokens(allow_eos=True)
+
+    def advance(self, g: "Grammar", token_id: int) -> Advance:
+        return Advance.Again
+
+
 class SequenceMatcher(Matcher):
     symbol: "Sequence"
 

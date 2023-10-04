@@ -5,6 +5,7 @@ os.environ["OT_TESTING"] = "1"
 from extensions.output_template.script import TemplatingLogitsProcessor, params
 from extensions.output_template.utils import encode, decode, shared, MINUS_INF
 from extensions.output_template.grammar import Grammar, Repeat, RegExp
+from extensions.output_template.state_machine import AnyTokenMatcher
 from torch import Tensor
 import math, random, json
 
@@ -274,6 +275,18 @@ def test_json():
         json.loads(a)
 
 
+def test_any_token():
+    """ Test nonstandard rule to disable grammar """
+    grammar: Grammar = params["grammar"]
+    grammar.reset("""
+        root ::= (donotend)
+        donotend ::= (.*)
+    """)
+    for i in range(255):
+        z = sample_test(random_scores())
+    assert isinstance(grammar.get_effective_matcher(), AnyTokenMatcher)
+
+
 if __name__ == "__main__":
     params["scores_size"] = 127
     params["enabled"] = True
@@ -284,3 +297,4 @@ if __name__ == "__main__":
     test_regexp()
     test_repeat()
     test_json()
+    test_any_token()
