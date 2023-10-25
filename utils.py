@@ -116,6 +116,12 @@ def get_token_dictionary() -> Dict[int, str]:
         if "OT_TESTING" in os.environ:
             params["token_dictionary"] = {i: decode([i]) for i in range(params["scores_size"])}
         else:
+            def convert_ids_to_tokens(i):
+                # Wraps shared.tokenizer.convert_ids_to_tokens to workaround possible missing tokens
+                try:
+                    return shared.tokenizer.convert_ids_to_tokens(i)
+                except IndexError:
+                    return None
             params["token_dictionary"] = {
                 token_id: (
                     shared.tokenizer.decode([token_id])
@@ -123,9 +129,10 @@ def get_token_dictionary() -> Dict[int, str]:
                     else tmp.replace("▁", " ")
                 )
                 for (token_id, tmp) in (
-                    (i, shared.tokenizer.convert_ids_to_tokens(i))
+                    (i, convert_ids_to_tokens(i))
                     for i in range(params["scores_size"])
                 )
+                if tmp
             }
         params["used_tokenizer"] = shared.tokenizer
         logger.info("output_template: Done creating token dictionary.")
