@@ -50,14 +50,37 @@ class RegExp(Symbol):
 
     def __init__(self, value: str):
         self.value = value
+        self.next: Optional[Terminal] = None
         if self.value.startswith("[^"):
-            # Special handling to optimize.
-            # Instead of allowing all tokens but these, rest is banned
+            # To prevent generating giant set of almost all tokens,
+            # tokens matching negative are banned instead
             self.negative = True
             self.re = re.compile("[" + value[2:], re.MULTILINE | re.DOTALL)
         else:
             self.negative = False
             self.re = re.compile("^" + value + "$", re.MULTILINE | re.DOTALL)
+
+    def make_re(self):
+        # https://youtu.be/iQrjbRz3y7A
+        if self.value.startswith("[^"):
+            # To prevent generating giant set of almost all tokens,
+            # tokens matching this  rest is banned
+            self.negative = True
+            r = "[" + self.value[2:]
+            if self.next:
+                r += "(" + re.escape(self.next.value) + ")?"
+            self.re = re.compile(r, re.MULTILINE | re.DOTALL)
+        else:
+            self.negative = False
+            self.re = re.compile("^" + self.value + "$", re.MULTILINE | re.DOTALL)
+
+    def allow_next(self, t: Terminal):
+        """
+        When regexp is followed by terminal, regexp is configured to also match tokens that include that terminal.
+        This prevents banning perfectly good tokens and biasing LLM output.
+        (also see 'test_allow_next')
+        """
+        self.next = t
 
     def __repr__(self):
         return f'r{self.value}'

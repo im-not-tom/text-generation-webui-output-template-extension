@@ -7,7 +7,7 @@ import torch, re
 
 RE_RULE = re.compile(r'\s*([-a-z]+)\s*::=\s*(.*)', re.MULTILINE | re.DOTALL)
 RE_NEWLINE = re.compile(r'[ \t]*\n[ \t\n]*(.*)', re.MULTILINE | re.DOTALL)
-RE_TERMINAL = re.compile(r'[ \t]*([-a-z]+)[ \t]*(.*)', re.DOTALL)
+RE_NONTERMINAL = re.compile(r'[ \t]*([-a-z_]+)[ \t]*(.*)', re.DOTALL)
 RE_ANYTOKEN = re.compile(r'[ \t]*\.[ \t]*\*[ \t]*(.*)', re.DOTALL)
 RE_OR = re.compile(r'[ \t\n]*\|[ \t]*(.*)', re.MULTILINE | re.DOTALL)
 RE_COMMENT = re.compile(r'([^#]*)#[^\n]*(.*)', re.MULTILINE | re.DOTALL)
@@ -154,13 +154,17 @@ def parse_sequence(text: str, parentheses=False) -> Tuple[Sequence, str]:
             try:
                 end_index = find_unescaped_index(text, text[0], 1)
                 t = text[1:end_index].encode("utf-8").decode("unicode_escape")
-                seq.append(Terminal(t))
+                t = Terminal(t)
+                if seq and isinstance(seq[-1], Repeat):
+                    if isinstance(seq[-1].item, RegExp):
+                        seq[-1].item.allow_next(t)
+                seq.append(t)
                 text = text[end_index+1:]
             except ValueError:
                 raise GrammarError(f"unmatched {text[0]}")
-        elif RE_TERMINAL.match(text):
+        elif RE_NONTERMINAL.match(text):
             # Non-terminal rule
-            t, text = RE_TERMINAL.match(text).groups()
+            t, text = RE_NONTERMINAL.match(text).groups()
             seq.append(NonTerminal(t))
         elif text[0] in " \t":
             # Whitespace

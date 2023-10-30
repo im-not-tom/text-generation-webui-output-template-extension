@@ -70,12 +70,28 @@ class TerminalMatcher(Matcher):
 
     def advance(self, g: "Grammar", token_id: int) -> Advance:
         d = get_token_dictionary()
-        if d[token_id] != self.symbol.value[self.index:self.index+len(d[token_id])]:
-            return Advance.Reject
-        self.index += len(get_token_dictionary()[token_id])
+        t = d[token_id]
+        if t != self.symbol.value[self.index:self.index + len(t)]:
+            if self.index == 0:
+                # Special case, allow entering mid-token
+                t = get_suffix_prefix(t, self.symbol.value)
+                if not t:
+                    return Advance.Reject
+            else:
+                return Advance.Reject
+        self.index += len(t)
         if self.index >= len(self.symbol.value):
             return Advance.Done
         return Advance.Again
+
+
+def get_suffix_prefix(suffix_from, prefix_from) -> str:
+    i = 1
+    while i <= min(len(suffix_from), len(prefix_from)):
+        if suffix_from[-i:] != prefix_from[:i]:
+            break
+        i += 1
+    return prefix_from[:i-1]
 
 
 class RegExpMatcher(Matcher):
@@ -97,7 +113,19 @@ class RegExpMatcher(Matcher):
                 banned = set()
                 for token_id in d:
                     if self.symbol.re.search(d[token_id]):
-                        banned.add(token_id)
+                        if self.symbol.next:
+                            t = d[token_id]
+                            # Check if there's prefix of next terminal that is also suffix of this token
+                            s = get_suffix_prefix(t, self.symbol.next.value)
+                            # If yes, check if rest of this token can be allowed
+                            if s and len(s) < len(t) and not self.symbol.re.search(t[0:-len(s)]):
+                                # Yes, allow that token
+                                pass
+                            else:
+                                # No, ban entire token
+                                banned.add(token_id)
+                        else:
+                            banned.add(token_id)
                 self.symbol.banned_cache[self.symbol.value] = banned
             return AllowedTokens(banned=self.symbol.banned_cache[self.symbol.value])
         else:

@@ -134,6 +134,8 @@ def get_token_dictionary() -> Dict[int, str]:
                 )
                 if tmp
             }
+        # import json
+        # open("/tmp/dict.json", "w").write(json.dumps(params["token_dictionary"]))
         params["used_tokenizer"] = shared.tokenizer
         logger.info("output_template: Done creating token dictionary.")
     return params["token_dictionary"]

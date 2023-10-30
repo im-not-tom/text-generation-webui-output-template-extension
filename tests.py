@@ -2,10 +2,10 @@ import os
 from typing import Union
 
 os.environ["OT_TESTING"] = "1"
+from extensions.output_template.state_machine import AnyTokenMatcher, TerminalMatcher
 from extensions.output_template.script import TemplatingLogitsProcessor, params
 from extensions.output_template.utils import encode, decode, shared, MINUS_INF
 from extensions.output_template.grammar import Grammar, Repeat, RegExp
-from extensions.output_template.state_machine import AnyTokenMatcher
 from torch import Tensor
 import math, random, json
 
@@ -287,6 +287,40 @@ def test_any_token():
     assert isinstance(grammar.get_effective_matcher(), AnyTokenMatcher)
 
 
+def test_allow_next():
+    """
+    Tests workaround for following issue:
+    Given grammar rule like root ::= [^"]* '"' expressing "anything until quotation mark, then quotation mark",
+    LogitsProcessor actually bans most of the tokens ending in " as they don't match 1st rule in sequence.
+    This would be technically okay and would generate correct output, but banning all those tokens would
+    result in changing LLM behaviour too much and cause it to generate much longer quoted strings.
+    """
+    # TODO: it may be good idea to do similar workaround for regexp followed by Alternative, but for now this
+    # TODO: should fix the biggest issue.
+    grammar: Grammar = params["grammar"]
+    grammar.reset("""
+        root ::= '"' [^"]* '"' 'H'
+    """)
+
+    # Sanity check for test tokenizer tokenizer
+    assert len(encode('."')) == 1
+    TOKEN = encode('."')[0]
+    Q = encode('"')[0]
+
+    # Go over " to reach 'anything but " part of seuquence'
+    scores = TemplatingLogitsProcessor()(None, random_scores())
+    assert scores[..., Q] > MINUS_INF
+    grammar.advance(Q)
+    # Check that '."' token is allowed as it fits above grammar
+    scores = TemplatingLogitsProcessor()(None, random_scores())
+    assert scores[..., TOKEN] > MINUS_INF
+    grammar.advance(TOKEN)
+
+    # Check that grammar moved to last rule
+    assert isinstance(grammar.get_effective_matcher(), TerminalMatcher)
+    assert grammar.get_effective_matcher().symbol.value == "H"
+
+
 if __name__ == "__main__":
     params["scores_size"] = 127
     params["enabled"] = True
@@ -298,3 +332,4 @@ if __name__ == "__main__":
     test_repeat()
     test_json()
     test_any_token()
+    test_allow_next()
