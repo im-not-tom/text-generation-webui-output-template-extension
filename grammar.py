@@ -154,11 +154,7 @@ def parse_sequence(text: str, parentheses=False) -> Tuple[Sequence, str]:
             try:
                 end_index = find_unescaped_index(text, text[0], 1)
                 t = text[1:end_index].encode("utf-8").decode("unicode_escape")
-                t = Terminal(t)
-                if seq and isinstance(seq[-1], Repeat):
-                    if isinstance(seq[-1].item, RegExp):
-                        seq[-1].item.allow_next(t)
-                seq.append(t)
+                seq.append(Terminal(t))
                 text = text[end_index+1:]
             except ValueError:
                 raise GrammarError(f"unmatched {text[0]}")

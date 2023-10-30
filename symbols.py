@@ -113,6 +113,17 @@ class Sequence(Collection):
         self.effective = []
         self.index = 0
 
+    def validate(self, g: "Grammar"):
+        super().validate(g)
+        for i in range(len(self.items) - 1):
+            if (True
+                and isinstance(self.items[i], Repeat)
+                and isinstance(self.items[i].item, RegExp)
+                and isinstance(g.resolve(self.items[i + 1]), Terminal)
+            ):
+                # See test_allow_next
+                self.items[i].item.allow_next(g.resolve(self.items[i + 1]))
+
     def __repr__(self):
         return f'({" ".join([repr(x) for x in self.items])})'
 

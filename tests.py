@@ -299,7 +299,8 @@ def test_allow_next():
     # TODO: should fix the biggest issue.
     grammar: Grammar = params["grammar"]
     grammar.reset("""
-        root ::= '"' [^"]* '"' 'H'
+        root ::= qm [^"]* qm 'H'
+        qm ::= '"'
     """)
 
     # Sanity check for test tokenizer tokenizer

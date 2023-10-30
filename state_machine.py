@@ -68,17 +68,23 @@ class TerminalMatcher(Matcher):
             self.symbol.allowed_cache[self.index] = allowed
         return AllowedTokens(allowed=self.symbol.allowed_cache[self.index])
 
+    def enter_in_middle(self, g: "Grammar", token_id: int) -> Advance:
+        if self.index == 0:
+            # Special case, allow entering mid-token
+            d = get_token_dictionary()
+            t = get_suffix_prefix(d[token_id], self.symbol.value)
+            if not t:
+                return Advance.Reject
+            self.index += len(t)
+            if self.index >= len(self.symbol.value):
+                return Advance.Done
+            return Advance.Again
+
     def advance(self, g: "Grammar", token_id: int) -> Advance:
         d = get_token_dictionary()
         t = d[token_id]
         if t != self.symbol.value[self.index:self.index + len(t)]:
-            if self.index == 0:
-                # Special case, allow entering mid-token
-                t = get_suffix_prefix(t, self.symbol.value)
-                if not t:
-                    return Advance.Reject
-            else:
-                return Advance.Reject
+            return Advance.Reject
         self.index += len(t)
         if self.index >= len(self.symbol.value):
             return Advance.Done
@@ -210,13 +216,21 @@ class SequenceMatcher(Matcher):
 
     def advance(self, g: "Grammar", token_id: int) -> Advance:
         a = self.items[self.index].advance(g, token_id)
-        if a in (Advance.Done, Advance.TryNext):
-            if self.index < len(self.symbol.items) - 1:
-                self.index += 1
-                self.ensure_matcher(g, self.index)
-                if a == Advance.TryNext:
-                    return self.advance(g, token_id)
-                a = Advance.Again
+        while True:
+            if a in (Advance.Done, Advance.TryNext):
+                if self.index < len(self.symbol.items) - 1:
+                    self.index += 1
+                    self.ensure_matcher(g, self.index)
+                    if a == Advance.TryNext:
+                        if (True
+                            and isinstance(self.items[self.index - 1], RepeatMatcher)
+                            and isinstance(self.items[self.index], TerminalMatcher)
+                        ):
+                            a = self.items[self.index].enter_in_middle(g, token_id)
+                            continue    # yep, this is a goto
+                        return self.advance(g, token_id)
+                    a = Advance.Again
+            break
         return a
 
 
